@@ -1,0 +1,1 @@
+ leavesColor = new Color(204, 102, 0); // Reddish-brown for fall leaves

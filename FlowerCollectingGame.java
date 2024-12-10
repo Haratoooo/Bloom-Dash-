@@ -20,28 +20,35 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
     private ArrayList<Rectangle> flowers;
     private int score = 0;
     private boolean gameOver = false;
-    private BufferedImage flowerImage; // Image for the flower
+    private BufferedImage flowerImage;
+    private BufferedImage fallTreeImage;
+    private BufferedImage fallRockImage;
+    private BufferedImage fallFlowerImage;
+    private String season = "summer"; // Default season
 
     public FlowerCollectingGame() {
         setFocusable(true);
         addKeyListener(this);
-
+    
         obstacles = new ArrayList<>();
         flowers = new ArrayList<>();
-
+    
         try {
             flowerImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\flower.png"));
+            fallFlowerImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\fall_flower.png")); // Fall flower image
+            fallTreeImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\fall_tree.png"));
+            fallRockImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\fall_rock.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
-
+    
         gameLoop = new Timer(20, this); // 50 FPS game loop
         gameLoop.start();
-
+    
         obstacleSpawner = new Timer(1500, e -> generateObstacle());
         obstacleSpawner.start();
-
-        flowerSpawner = new Timer(2000, e -> generateFlower());
+    
+        flowerSpawner = new Timer(1500, e -> generateFlower());
         flowerSpawner.start();
     }
 
@@ -49,11 +56,10 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
         super.paintComponent(g);
 
         // Background and ground
-        Color skyColor = interpolateColor(Color.CYAN, new Color(255, 165, 0), score, 80, 130);
-        Color groundColor = interpolateColor(Color.GREEN, new Color(139, 69, 19), score, 80, 130);
-        Color leavesColor = interpolateColor(Color.GREEN, new Color(165, 42, 42), score, 80, 130);
+        Color skyColor = interpolateColor(Color.CYAN, new Color(204, 234, 215), score, 50, 100);
+        Color groundColor = interpolateColor(Color.GREEN, new Color(135, 114, 0), score, 50, 100);
+        Color leavesColor = interpolateColor(Color.GREEN, new Color(165, 42, 42), score, 50, 100);
 
-        // Background and ground
         g.setColor(skyColor);
         g.fillRect(0, 0, 800, 400);
         g.setColor(groundColor);
@@ -64,13 +70,21 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
 
         // Obstacles
         for (Rectangle obstacle : obstacles) {
-            if (obstacle.height == 30) {
-                drawDetailedRock(g, obstacle.x, obstacle.y);
+            if (season.equals("fall")) {
+                if (obstacle.height == 30) {
+                    g.drawImage(fallRockImage, obstacle.x, obstacle.y - 20, 50, 50, null); // Fall rock
+                } else {
+                    g.drawImage(fallTreeImage, obstacle.x, obstacle.y - 10, 70, 90, null); // Fall tree
+                }
             } else {
-                g.setColor(new Color(102, 51, 0)); // Brown trunk
-                g.fillRect(obstacle.x, obstacle.y + 40, 10, 30);
-                g.setColor(leavesColor); // Green leaves
-                g.fillOval(obstacle.x - 10, obstacle.y, 30, 50);
+                if (obstacle.height == 30) {
+                    drawDetailedRock(g, obstacle.x, obstacle.y);
+                } else {
+                    g.setColor(new Color(102, 51, 0)); // Brown trunk
+                    g.fillRect(obstacle.x, obstacle.y + 40, 10, 30);
+                    g.setColor(leavesColor); // Green leaves
+                    g.fillOval(obstacle.x - 10, obstacle.y, 30, 50);
+                }
             }
         }
 
@@ -143,7 +157,7 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
         int x = 800;
         int y = 250;
 
-        if (rand.nextBoolean()) { // Alternate between tree and rock
+        if (rand.nextBoolean()) {
             obstacles.add(new Rectangle(x, y + 30, 30, 30)); // Rock
         } else {
             obstacles.add(new Rectangle(x, y - 20, 30, 40)); // Tree
@@ -156,46 +170,46 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
 
     private void generateFlower() {
         if (gameOver) return;
-    
+
         Random rand = new Random();
-        int minDistance = 50; // Minimum distance in pixels from any obstacle
-    
-        int x, y;
-        boolean tooClose;
-        do {
-            tooClose = false;
-            x = 800 + rand.nextInt(200);
-            y = 250; // Ground level
-    
-            for (Rectangle obstacle : obstacles) {
-                if (obstacle != null) {
-                    double distance = Math.sqrt(Math.pow(x - obstacle.x, 2) + Math.pow(y - obstacle.y, 2));
-                    if (distance < minDistance) {
-                        tooClose = true;
-                        break;
-                    }
-                }
-            }
-        } while (tooClose);
-    
+        int x = 900 + rand.nextInt(300);
+        int y = 250;
+
         flowers.add(new Rectangle(x, y, 20, 20));
-    
+
         if (flowers.size() > 5) {
             flowers.remove(0);
         }
     }
-    
+
+    public void setSeason(String newSeason) {
+        season = newSeason;
+        // Update flower image when the season changes to fall
+        if (season.equals("fall")) {
+            try {
+                flowerImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\fall_flower.png")); // Fall flower image
+            } catch (IOException e) {
+                e.printStackTrace(); // Handle the exception by printing the stack trace
+            }
+        } else {
+            try {
+                flowerImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\flower.png"));
+            } catch (IOException e) {
+                e.printStackTrace(); // Handle the exception by printing the stack trace
+            }
+        }
+        repaint();
+    }
 
     @Override
     public void actionPerformed(ActionEvent e) {
         if (gameOver) return;
 
-        // Gravity and jumping
         if (isJumping) {
             playerVelY = -15;
             isJumping = false;
         } else {
-            playerVelY += 1; // Simulate gravity
+            playerVelY += 1;
         }
 
         playerY += playerVelY;
@@ -204,7 +218,6 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
             playerVelY = 0;
         }
 
-        // Move obstacles
         for (int i = 0; i < obstacles.size(); i++) {
             Rectangle obstacle = obstacles.get(i);
             obstacle.x -= 10;
@@ -220,7 +233,6 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
             }
         }
 
-        // Move flowers
         for (int i = 0; i < flowers.size(); i++) {
             Rectangle flower = flowers.get(i);
             flower.x -= 10;
@@ -229,10 +241,14 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
                 flowers.remove(i);
                 i--;
             } else if (flower.intersects(new Rectangle(50, playerY, 50, 50))) {
-                score += 10; // Collect flower
+                score += 10;
                 flowers.remove(i);
                 i--;
             }
+        }
+
+        if (score >= 100 && !season.equals("fall")) {
+            setSeason("fall");
         }
 
         repaint();
