@@ -24,18 +24,25 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
     private BufferedImage fallTreeImage;
     private BufferedImage fallRockImage;
     private BufferedImage fallFlowerImage;
+    private BufferedImage spritesheet;
+    private BufferedImage[] frames; // Sprite animation frames
+    private BufferedImage currentFrame;
+    private int frameIndex = 0;
+    private int runAnimationCounter = 0, runAnimationSpeed = 10;
+
     private String season = "summer"; // Default season
 
     public FlowerCollectingGame() {
         setFocusable(true);
         addKeyListener(this);
-    
         obstacles = new ArrayList<>();
         flowers = new ArrayList<>();
     
         try {
+            spritesheet = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\hedgehiog.png")); // Path to sprite sheet
+            extractFrames();
             flowerImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\flower.png"));
-            fallFlowerImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\fall_flower.png")); // Fall flower image
+            fallFlowerImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\fall_flower.png"));
             fallTreeImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\fall_tree.png"));
             fallRockImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\fall_rock.png"));
         } catch (IOException e) {
@@ -50,8 +57,49 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
     
         flowerSpawner = new Timer(1500, e -> generateFlower());
         flowerSpawner.start();
+    
+        // Initialize the first frame
+        if (frames != null && frames.length > 0) {
+            currentFrame = frames[1]; // Default to running frame
+        }
+    }
+    
+    private void extractFrames() {
+        if (spritesheet == null) {
+            System.out.println("Spritesheet is null, cannot extract frames.");
+            return;
+        }
+    
+        frames = new BufferedImage[4];
+        frames[0] = resizeImage(spritesheet.getSubimage(24, 121, 100, 65), 70, 53);  // Frame 1 (Jumping)
+        frames[1] = resizeImage(spritesheet.getSubimage(149, 121, 100, 65), 70, 53); // Frame 2 (Running 1)
+        frames[2] = resizeImage(spritesheet.getSubimage(275, 121, 100, 65), 70, 53); // Frame 3 (Running 2)
+        frames[3] = resizeImage(spritesheet.getSubimage(24, 217, 100, 65), 70, 53);  // Frame 4 (Dead)
     }
 
+    private BufferedImage resizeImage(BufferedImage original, int newWidth, int newHeight) {
+        BufferedImage resized = new BufferedImage(newWidth, newHeight, original.getType());
+        Graphics2D g2d = resized.createGraphics();
+        g2d.drawImage(original, 0, 0, newWidth, newHeight, null);
+        g2d.dispose();
+        return resized;
+    }
+
+    private void updateAnimation() {
+        if (gameOver) {
+            currentFrame = frames[3]; // Dead frame
+        } else if (playerY < 250) {
+            currentFrame = frames[0]; // Jumping frame
+        } else {
+            runAnimationCounter++;
+            if (runAnimationCounter >= runAnimationSpeed) {
+                frameIndex = (frameIndex == 1) ? 2 : 1; // Toggle between running frames
+                currentFrame = frames[frameIndex];
+                runAnimationCounter = 0;
+            }
+        }
+    }
+    
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
 
@@ -66,7 +114,9 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
         g.fillRect(0, 300, 800, 100);
 
         // Player
-        drawHedgehog(g, 50, playerY);
+        if (currentFrame != null) {
+            g.drawImage(currentFrame, 50, playerY, null);
+        }
 
         // Obstacles
         for (Rectangle obstacle : obstacles) {
@@ -124,21 +174,6 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
         }
     }
 
-    private void drawHedgehog(Graphics g, int x, int y) {
-        g.setColor(new Color(139, 69, 19));
-        g.fillOval(x, y + 20, 50, 30);
-        g.setColor(new Color(105, 55, 15));
-        for (int i = 0; i < 5; i++) {
-            int spikeX = x + 10 + (i * 8);
-            g.fillPolygon(new int[]{spikeX, spikeX + 5, spikeX + 10}, new int[]{y + 25, y + 15, y + 25}, 3);
-        }
-        g.setColor(new Color(160, 82, 45));
-        g.fillOval(x + 35, y + 5, 20, 20);
-        g.setColor(Color.BLACK);
-        g.fillOval(x + 45, y + 10, 5, 5);
-        g.fillOval(x + 52, y + 15, 5, 5);
-    }
-
     private void drawDetailedRock(Graphics g, int x, int y) {
         g.setColor(Color.GRAY);
         g.fillOval(x, y, 30, 20);
@@ -182,24 +217,24 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
         }
     }
 
-    public void setSeason(String newSeason) {
-        season = newSeason;
-        // Update flower image when the season changes to fall
-        if (season.equals("fall")) {
-            try {
-                flowerImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\fall_flower.png")); // Fall flower image
-            } catch (IOException e) {
-                e.printStackTrace(); // Handle the exception by printing the stack trace
-            }
-        } else {
-            try {
-                flowerImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\flower.png"));
-            } catch (IOException e) {
-                e.printStackTrace(); // Handle the exception by printing the stack trace
-            }
+   public void setSeason(String newSeason) {
+    season = newSeason;
+    // Update flower image when the season changes to fall
+    if (season.equals("fall")) {
+        try {
+            flowerImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\fall_flower.png")); // Fall flower image
+        } catch (IOException e) {
+            e.printStackTrace(); // Handle the exception by printing the stack trace
         }
-        repaint();
+    } else {
+        try {
+            flowerImage = ImageIO.read(new File("D:\\SY 2024-2025\\Bloom Dash!\\pics\\flower.png"));
+        } catch (IOException e) {
+            e.printStackTrace(); // Handle the exception by printing the stack trace
+        }
     }
+    repaint();
+}
 
     @Override
     public void actionPerformed(ActionEvent e) {
@@ -217,6 +252,8 @@ public class FlowerCollectingGame extends JPanel implements ActionListener, KeyL
             playerY = 250;
             playerVelY = 0;
         }
+
+        updateAnimation();
 
         for (int i = 0; i < obstacles.size(); i++) {
             Rectangle obstacle = obstacles.get(i);
